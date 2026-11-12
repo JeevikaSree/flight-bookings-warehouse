@@ -1,0 +1,18 @@
+{
+  "name": "flight_bookings_daily",
+  "description": "Daily incremental load: bronze -> silver -> dimensions (SCD1/SCD2) -> fact MERGE -> validation.",
+  "parameters": [
+    { "name": "catalog",   "default": "workspace" },
+    { "name": "schema",    "default": "flights" },
+    { "name": "load_date", "default": "{{job.start_time.iso_date}}" }
+  ],
+  "schedule": { "quartz_cron_expression": "0 30 6 * * ?", "timezone_id": "Asia/Kolkata", "pause_status": "PAUSED" },
+  "tasks": [
+    { "task_key": "bronze",     "notebook_task": { "notebook_path": "notebooks/01_bronze_incremental", "source": "GIT" } },
+    { "task_key": "silver",     "depends_on": [ { "task_key": "bronze" } ],     "notebook_task": { "notebook_path": "notebooks/02_silver_clean",     "source": "GIT" } },
+    { "task_key": "dimensions", "depends_on": [ { "task_key": "silver" } ],     "notebook_task": { "notebook_path": "notebooks/03_gold_dimensions",  "source": "GIT" } },
+    { "task_key": "fact",       "depends_on": [ { "task_key": "dimensions" } ], "notebook_task": { "notebook_path": "notebooks/04_gold_fact",        "source": "GIT" } },
+    { "task_key": "validate",   "depends_on": [ { "task_key": "fact" } ],       "notebook_task": { "notebook_path": "notebooks/05_validate",         "source": "GIT" } }
+  ],
+  "git_source": { "git_url": "https://github.com/JeevikaSree/flight-bookings-warehouse", "git_provider": "gitHub", "git_branch": "main" }
+}
